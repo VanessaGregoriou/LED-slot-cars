@@ -82,7 +82,7 @@ int TBEEP = 3;
 byte leader = 0;
 byte loop_max = 5; // total laps race
 
-float ACEL = 0.2;
+float ACEL = 0.03;
 float kf = 0.015; // friction constant
 float kg = 0.003; // gravity constant
 
@@ -137,36 +137,43 @@ void start_race() {
     track.setPixelColor(i, track.Color(0, 0, 0));
   };
   track.show();
-  delay(2000);
-  track.setPixelColor(12, track.Color(0, 255, 0));
-  track.setPixelColor(11, track.Color(0, 255, 0));
-  track.show();
-  tone(PIN_AUDIO, 400);
-  delay(2000);
-  noTone(PIN_AUDIO);
-  track.setPixelColor(12, track.Color(0, 0, 0));
-  track.setPixelColor(11, track.Color(0, 0, 0));
-  track.setPixelColor(10, track.Color(255, 255, 0));
-  track.setPixelColor(9, track.Color(255, 255, 0));
-  track.show();
-  tone(PIN_AUDIO, 600);
-  delay(2000);
-  noTone(PIN_AUDIO);
-  track.setPixelColor(9, track.Color(0, 0, 0));
-  track.setPixelColor(10, track.Color(0, 0, 0));
-  track.setPixelColor(8, track.Color(255, 0, 0));
-  track.setPixelColor(7, track.Color(255, 0, 0));
-  track.show();
-  tone(PIN_AUDIO, 1200);
-  delay(2000);
-  noTone(PIN_AUDIO);
+  // delay(2000);
+  // track.setPixelColor(12, track.Color(0, 255, 0));
+  // track.setPixelColor(11, track.Color(0, 255, 0));
+  // track.show();
+  // tone(PIN_AUDIO, 400);
+  // delay(2000);
+  // noTone(PIN_AUDIO);
+  // track.setPixelColor(12, track.Color(0, 0, 0));
+  // track.setPixelColor(11, track.Color(0, 0, 0));
+  // track.setPixelColor(10, track.Color(255, 255, 0));
+  // track.setPixelColor(9, track.Color(255, 255, 0));
+  // track.show();
+  // tone(PIN_AUDIO, 600);
+  // delay(2000);
+  // noTone(PIN_AUDIO);
+  // track.setPixelColor(9, track.Color(0, 0, 0));
+  // track.setPixelColor(10, track.Color(0, 0, 0));
+  // track.setPixelColor(8, track.Color(255, 0, 0));
+  // track.setPixelColor(7, track.Color(255, 0, 0));
+  // track.show();
+  // tone(PIN_AUDIO, 1200);
+  // delay(2000);
+  // noTone(PIN_AUDIO);
   timestamp = 0;
 };
 
-void winner_fx() {
+void resetRacers() {
+  for (int i = 0; i < NUM_PLAYERS; i++) {
+    racers[i].speed = 0;
+    racers[i].location = 0;
+    racers[i].lapNum = 0;
+  }
+}
+
+void winnerFx() {
   int msize = sizeof(win_music) / sizeof(int);
-  for (int note = 0; note < msize; note++)
-  {
+  for (int note = 0; note < msize; note++) {
     tone(PIN_AUDIO, win_music[note], 200);
     delay(230);
     noTone(PIN_AUDIO);
@@ -186,12 +193,12 @@ void loop() {
     track.setPixelColor(i, track.Color(0, 0, (127 - gravity_map[i]) / 8));
   };
 
+  int winner = -1;
   for (int i = 0; i < NUM_PLAYERS; i++) {
-    if (racers[i].flag_sw == 1) && (digitalRead(racers[i].pin) == 0) {
+    if (digitalRead(racers[i].pin) == 0) {
       racers[i].flag_sw = 0;
       racers[i].speed += ACEL;
-    };
-    if (racers[i].flag_sw == 0) && (digitalRead(racers[i].pin) == 1) {
+    } else if (racers[i].flag_sw == 0) {
       racers[i].flag_sw = 1;
     };
 
@@ -203,46 +210,21 @@ void loop() {
       tone(PIN_AUDIO, 600);
       TBEEP = 2;
     }
+    if (racers[i].lapNum > loop_max) {
+      winner = i;
+    }
   }
 
-  // if (dist1 > dist2) {
-  //   leader = 1;
-  // }
-  // if (dist2 > dist1) {
-  //   leader = 2;
-  // };
-
-  // if (loop1 > loop_max) {
-  //   for (int i = 0; i < NPIXELS; i++) {
-  //     track.setPixelColor(i, track.Color(0, 255, 0));
-  //   };
-  //   track.show();
-  //   winner_fx();
-  //   loop1 = 0;
-  //   loop2 = 0;
-  //   dist1 = 0;
-  //   dist2 = 0;
-  //   speed1 = 0;
-  //   speed2 = 0;
-  //   timestamp = 0;
-  //   start_race();
-  // }
-
-  // if (loop2 > loop_max) {
-  //   for (int i = 0; i < NPIXELS; i++) {
-  //     track.setPixelColor(i, track.Color(255, 0, 0));
-  //   };
-  //   track.show();
-  //   winner_fx();
-  //   loop1 = 0;
-  //   loop2 = 0;
-  //   dist1 = 0;
-  //   dist2 = 0;
-  //   speed1 = 0;
-  //   speed2 = 0;
-  //   timestamp = 0;
-  //   start_race();
-  // }
+  if (winner != -1) {
+    for (int i = 0; i < NPIXELS; i++) {
+      track.setPixelColor(i, racers[winner].color);
+    };
+    track.show();
+    winnerFx();
+    resetRacers();
+    timestamp = 0;
+    start_race();
+  }
 
   if ((millis() & 512) == (512 * draworder)) {
     draworder = draworder == 0 ? 1 : 0;
