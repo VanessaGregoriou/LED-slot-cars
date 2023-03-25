@@ -104,7 +104,7 @@
 //   };
 // }
 
-// void setup()
+// void setup_og()
 // {
 //   for (int i = 0; i < NPIXELS; i++)
 //   {
@@ -296,7 +296,7 @@
 //   };
 // }
 
-// void loop()
+// void loop_og()
 // {
 //   // for(int i=0;i<NPIXELS;i++){track.setPixelColor(i, track.Color(0,0,0));};
 //   for (int i = 0; i < NPIXELS; i++)
