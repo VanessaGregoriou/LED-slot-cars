@@ -30,13 +30,15 @@
 #include <Adafruit_NeoPixel.h>
 #include <math.h>
 
+#define ARRAY_SIZE(array) ((sizeof(array)) / (sizeof(array[0])))
 #define NPIXELS 300 // MAX LEDs actives on strip
 
 // Pins Arduino Day 19 version
 #define PIN_LED A0  // R 500 ohms to DI pin for WS2812 and WS2813, for WS2813 BI pin of first LED to GND  ,  CAP 1000 uF to VCC 5v/GND,power supplie 5V 2A
 
 #define NUM_PLAYERS 2
-#define MAX_SPEED 0.9
+#define MAX_CORNER_SPEED 90
+#define MAX_SPEED 500
 
 Adafruit_NeoPixel track = Adafruit_NeoPixel(NPIXELS, PIN_LED, NEO_GRB + NEO_KHZ800);
 
@@ -54,10 +56,10 @@ typedef struct {
   uint32_t color;
   byte flag_sw;
   float speed;
-  int location;
+  float location;
   byte lapNum;
   unsigned long crashTimestamp; // The timestamp when the racer last crashed.
-  unsigned long crashWait; // How much time is left before the racer can start again.
+  long crashWait; // How much time is left before the racer can start again.
 } Racer;
 
 Racer racers[NUM_PLAYERS];
@@ -79,6 +81,7 @@ int win_music[] = {
     3136};
 
 int raceMap[NPIXELS];
+int corners[] = {15, 45, 90, 120, 150, 180, 225, 270};
 
 int TBEEP = 3;
 
@@ -119,10 +122,15 @@ void setup() {
 
 void start_race() {
   for (int i = 0; i < NPIXELS; i++) {
-    raceMap[i] = 100;
+    raceMap[i] = MAX_SPEED;
     track.setPixelColor(i, track.Color(0, 0, 0));
   };
-  raceMap[15] = MAX_SPEED;
+  for (int i = 0; i < ARRAY_SIZE(corners); i++) {
+    int cornerStart = corners[i] - 2;
+    for (int j = 0; j < 5; j++) {
+      raceMap[cornerStart + j] = MAX_CORNER_SPEED;
+    }
+  }
   track.show();
 
     // delay(2000);
@@ -227,12 +235,9 @@ Racer updateRacerLocation(Racer racer) {
     racer.speed -= racer.speed * KF;
 
     for (int distFromLocation = 0; distFromLocation < racer.speed; distFromLocation++) {
-      int location = (racer.location + distFromLocation) % NPIXELS;
-      // if (location >= NPIXELS) {
-      //   location -= NPIXELS;
-      // }
+      int location = round(racer.location + distFromLocation) % NPIXELS;
 
-      if (racer.speed >= raceMap[location]) {
+      if (racer.speed * 100 >= raceMap[location]) {
         racer.location = location;
         racer.crashTimestamp = millis();
         racer.crashWait = CRASH_WAIT_TIME;
