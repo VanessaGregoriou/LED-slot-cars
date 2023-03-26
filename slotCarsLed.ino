@@ -37,8 +37,6 @@
 #define PIN_LED A0  // R 500 ohms to DI pin for WS2812 and WS2813, for WS2813 BI pin of first LED to GND  ,  CAP 1000 uF to VCC 5v/GND,power supplie 5V 2A
 
 #define NUM_PLAYERS 2
-#define MAX_CORNER_SPEED 90
-#define MAX_SPEED 500
 
 Adafruit_NeoPixel track = Adafruit_NeoPixel(NPIXELS, PIN_LED, NEO_GRB + NEO_KHZ800);
 
@@ -92,6 +90,8 @@ byte loop_max = 5; // total laps race
 #define KF 0.015 // friction constant
 #define KG 0.003 // gravity constant
 #define CRASH_WAIT_TIME 3000
+#define MAX_CORNER_SPEED 110
+#define MAX_SPEED 500
 
 byte draworder = 0;
 
@@ -133,29 +133,29 @@ void start_race() {
   }
   track.show();
 
-    // delay(2000);
-    // track.setPixelColor(12, track.Color(0, 255, 0));
-    // track.setPixelColor(11, track.Color(0, 255, 0));
-    // track.show();
-    // tone(PIN_AUDIO, 400);
-    // delay(2000);
-    // noTone(PIN_AUDIO);
-    // track.setPixelColor(12, track.Color(0, 0, 0));
-    // track.setPixelColor(11, track.Color(0, 0, 0));
-    // track.setPixelColor(10, track.Color(255, 255, 0));
-    // track.setPixelColor(9, track.Color(255, 255, 0));
-    // track.show();
-    // tone(PIN_AUDIO, 600);
-    // delay(2000);
-    // noTone(PIN_AUDIO);
-    // track.setPixelColor(9, track.Color(0, 0, 0));
-    // track.setPixelColor(10, track.Color(0, 0, 0));
-    // track.setPixelColor(8, track.Color(255, 0, 0));
-    // track.setPixelColor(7, track.Color(255, 0, 0));
-    // track.show();
-    // tone(PIN_AUDIO, 1200);
-    // delay(2000);
-    // noTone(PIN_AUDIO);
+    delay(2000);
+    track.setPixelColor(12, track.Color(0, 255, 0));
+    track.setPixelColor(11, track.Color(0, 255, 0));
+    track.show();
+    tone(PIN_AUDIO, 400);
+    delay(2000);
+    noTone(PIN_AUDIO);
+    track.setPixelColor(12, track.Color(0, 0, 0));
+    track.setPixelColor(11, track.Color(0, 0, 0));
+    track.setPixelColor(10, track.Color(255, 255, 0));
+    track.setPixelColor(9, track.Color(255, 255, 0));
+    track.show();
+    tone(PIN_AUDIO, 600);
+    delay(2000);
+    noTone(PIN_AUDIO);
+    track.setPixelColor(9, track.Color(0, 0, 0));
+    track.setPixelColor(10, track.Color(0, 0, 0));
+    track.setPixelColor(8, track.Color(255, 0, 0));
+    track.setPixelColor(7, track.Color(255, 0, 0));
+    track.show();
+    tone(PIN_AUDIO, 1200);
+    delay(2000);
+    noTone(PIN_AUDIO);
   };
 
 void resetRacers() {
@@ -207,9 +207,9 @@ void loop() {
 
   if (draworder == 0) {
     drawCar(racers[0]);
-    // drawCar(racers[1]);
+    drawCar(racers[1]);
   } else {
-    // drawCar(racers[1]);
+    drawCar(racers[1]);
     drawCar(racers[0]);
   }
 
