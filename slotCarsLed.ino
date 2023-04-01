@@ -65,10 +65,8 @@ Racer racers[NUM_PLAYERS];
 // switch players to PIN and GND
 int PIN_INPUTS[] = {7, 6};
 uint32_t COLORS[] = {
-  ORANGE,
   BLUE,
-  YELLOW,
-  PURPLE
+  RED,
 };
 
 #define PIN_AUDIO 3 // through CAP 2uf to speaker 8 ohms
@@ -79,18 +77,18 @@ int win_music[] = {
     3136};
 
 int raceMap[NPIXELS];
-int corners[] = {15, 45, 90, 120, 150, 180, 225, 270};
+int corners[] = {30, 70, 110, 145, 176, 210, 242, 265};
 
 int TBEEP = 3;
 
 byte leader = 0;
 byte loop_max = 5; // total laps race
 
-#define ACEL 0.03
+#define ACEL 0.018
 #define KF 0.015 // friction constant
 #define KG 0.003 // gravity constant
-#define CRASH_WAIT_TIME 3000
-#define MAX_CORNER_SPEED 110
+#define CRASH_WAIT_TIME 10000
+#define MAX_CORNER_SPEED 150
 #define MAX_SPEED 500
 
 byte draworder = 0;
@@ -126,37 +124,12 @@ void start_race() {
     track.setPixelColor(i, track.Color(0, 0, 0));
   };
   for (int i = 0; i < ARRAY_SIZE(corners); i++) {
-    int cornerStart = corners[i] - 2;
-    for (int j = 0; j < 5; j++) {
-      raceMap[cornerStart + j] = MAX_CORNER_SPEED;
+    int cornerStart = corners[i];
+    for (int j = -5; j < 5; j++) {
+      raceMap[cornerStart + j] = MAX_CORNER_SPEED - (5 - abs(j)) * 10;
     }
   }
-  track.show();
-
-    delay(2000);
-    track.setPixelColor(12, track.Color(0, 255, 0));
-    track.setPixelColor(11, track.Color(0, 255, 0));
-    track.show();
-    tone(PIN_AUDIO, 400);
-    delay(2000);
-    noTone(PIN_AUDIO);
-    track.setPixelColor(12, track.Color(0, 0, 0));
-    track.setPixelColor(11, track.Color(0, 0, 0));
-    track.setPixelColor(10, track.Color(255, 255, 0));
-    track.setPixelColor(9, track.Color(255, 255, 0));
-    track.show();
-    tone(PIN_AUDIO, 600);
-    delay(2000);
-    noTone(PIN_AUDIO);
-    track.setPixelColor(9, track.Color(0, 0, 0));
-    track.setPixelColor(10, track.Color(0, 0, 0));
-    track.setPixelColor(8, track.Color(255, 0, 0));
-    track.setPixelColor(7, track.Color(255, 0, 0));
-    track.show();
-    tone(PIN_AUDIO, 1200);
-    delay(2000);
-    noTone(PIN_AUDIO);
-  };
+}
 
 void resetRacers() {
   for (int i = 0; i < NUM_PLAYERS; i++) {
@@ -177,8 +150,12 @@ void winnerFx() {
 
 void drawCar(Racer racer) {
   for (int i = 0; i <= racer.lapNum; i++) {
-    track.setPixelColor(((word)racer.location % NPIXELS) + i, racer.color);
-  };
+    uint32_t color = racer.color;
+    if (racer.crashWait > 0 && racer.crashWait % 3000 < 1500) {
+      color = track.Color(0, 0, 0);
+    }
+    track.setPixelColor(((word)racer.location % NPIXELS) + i, color);
+  }
 }
 
 void loop() {
@@ -215,13 +192,6 @@ void loop() {
 
   track.show();
   delay(tdelay);
-
-  if (TBEEP > 0) {
-    TBEEP -= 1;
-    if (TBEEP == 0) {
-      noTone(PIN_AUDIO);
-    }; // lib conflict !!!! interruption off by neopixel
-  };
 }
 
 Racer updateRacerLocation(Racer racer) {
@@ -256,8 +226,6 @@ Racer updateRacerLocation(Racer racer) {
   if (racer.location >= NPIXELS) {
     racer.lapNum++;
     racer.location = 0;
-    tone(PIN_AUDIO, 600);
-    TBEEP = 2;
   }
   return racer;
 }
