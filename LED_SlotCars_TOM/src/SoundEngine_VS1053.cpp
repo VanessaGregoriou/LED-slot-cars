@@ -21,7 +21,7 @@ void SoundEngine_VS1053::begin(void){
     Serial.println(F("SD found"));
 
     if(musicPlayer->useInterrupt(VS1053_FILEPLAYER_PIN_INT)){
-      Serial.print("interupt working");
+      Serial.println(F("interupt working"));
     };  
     
     // make as loud as possible
@@ -30,12 +30,26 @@ void SoundEngine_VS1053::begin(void){
 
 void SoundEngine_VS1053::playSoundWithIndex(int i){
 
-    String s = "/track00";
-    s = s + i;
-    s = s + ".mp3";
-    musicPlayer->stopPlaying(); // must call stop before playing again!
-    Serial.println(s.c_str());
-    musicPlayer->startPlayingFile(s.c_str());
+  char str[] = "/track00";
+  char num[] = "1234";
+  itoa(i,num,10);
+  strcat(str, num);    
+  strcat(str, ".mp3");    
+  Serial.println(str);
+  // musicPlayer->playFullFile(str);
+    musicPlayer->startPlayingFile(str);
+
+
+    // // char str[] = "/track00";
+    // // char num[] = "00";
+    // // itoa(i,num,10);
+
+    // // strcat(str, num);    
+    // // strcat(str, ".mp3");    
+    // // Serial.println(str);
+
+    // // musicPlayer->stopPlaying(); // must call stop before playing again!
+    // musicPlayer->startPlayingFile(str);
 }
 
 

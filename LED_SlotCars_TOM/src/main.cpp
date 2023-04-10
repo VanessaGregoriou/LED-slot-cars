@@ -66,7 +66,7 @@ typedef struct {
 Racer racers[NUM_PLAYERS];
 
 // switch players to PIN and GND
-int PIN_INPUTS[] = {A1};
+int PIN_INPUTS[] = {A0};
 uint32_t COLORS[] = {
   RED,
   BLUE,
@@ -101,7 +101,7 @@ Racer newRacer(int pin, uint32_t color) {
       /* crashWait= */ 0};
 }
 
-SoundEngine_VS1053 soundEngine = SoundEngine_VS1053();
+SoundEngine_VS1053 *soundEngine = new SoundEngine_VS1053();
 
 void updateRacerLocation(Racer *racer);
 void start_race();
@@ -111,8 +111,10 @@ void setup() {
   Serial.begin(9600);
 
   // TODO : add sound - currently board is crashing   
-  // soundEngine.begin();
-  // soundEngine.playSoundWithIndex(1);
+  // soundEngine->begin();
+  // delay(1000);
+
+  // soundEngine->playSoundWithIndex(1);
 
   track.begin();
 
@@ -165,9 +167,9 @@ void drawCar(Racer racer) {
     track.setPixelColor((roundf(racer.location) % NPIXELS) , racer.color);
   };
 }
-void loop() {
-}
 void loopx() {
+}
+void loop() {
   track.clear();
 
   // light up the whole track
