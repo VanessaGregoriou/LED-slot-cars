@@ -29,7 +29,7 @@
 
 #include <Adafruit_NeoPixel.h>
 #include <math.h>
-#include <SoundEngine_VS1053.hpp>
+// #include <SoundEngine_VS1053.hpp>
 
 #define ARRAY_SIZE(array) ((sizeof(array)) / (sizeof(array[0])))
 // #define NPIXELS 658 // MAX LEDs actives on strip
@@ -101,7 +101,7 @@ Racer newRacer(int pin, uint32_t color) {
       /* crashWait= */ 0};
 }
 
-SoundEngine_VS1053 *soundEngine = new SoundEngine_VS1053();
+// SoundEngine_VS1053 *soundEngine = new SoundEngine_VS1053();
 
 void updateRacerLocation(Racer *racer);
 void start_race();
