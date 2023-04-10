@@ -29,7 +29,7 @@
 
 #include <Adafruit_NeoPixel.h>
 #include <math.h>
-// #include <SoundEngine_VS1053.hpp>
+#include <SoundEngine_VS1053.hpp>
 
 #define ARRAY_SIZE(array) ((sizeof(array)) / (sizeof(array[0])))
 // #define NPIXELS 658 // MAX LEDs actives on strip
@@ -38,7 +38,6 @@
 // Pins Arduino Day 19 version
 #define PIN_LED 19  // R 500 ohms to DI pin for WS2812 and WS2813, for WS2813 BI pin of first LED to GND  ,  CAP 1000 uF to VCC 5v/GND,power supplie 5V 2A
 
-#define NUM_PLAYERS 1
 
 Adafruit_NeoPixel track = Adafruit_NeoPixel(NPIXELS, PIN_LED, NEO_GRB + NEO_KHZ800);
 
@@ -51,6 +50,7 @@ Adafruit_NeoPixel track = Adafruit_NeoPixel(NPIXELS, PIN_LED, NEO_GRB + NEO_KHZ8
 #define ORANGE track.Color(204, 102, 0)
 #define LIGHT_BLUE track.Color(153, 255, 255)
 
+#define NUM_PLAYERS 2
 
 typedef struct {
   int pin;
@@ -66,7 +66,7 @@ typedef struct {
 Racer racers[NUM_PLAYERS];
 
 // switch players to PIN and GND
-int PIN_INPUTS[] = {A0};
+int PIN_INPUTS[] = {A0, A1};
 uint32_t COLORS[] = {
   RED,
   BLUE,
@@ -101,7 +101,7 @@ Racer newRacer(int pin, uint32_t color) {
       /* crashWait= */ 0};
 }
 
-// SoundEngine_VS1053 *soundEngine = new SoundEngine_VS1053();
+SoundEngine_VS1053 *soundEngine = new SoundEngine_VS1053();
 
 void updateRacerLocation(Racer *racer);
 void start_race();
@@ -110,13 +110,12 @@ void start_race();
 void setup() {
   Serial.begin(9600);
 
+  track.begin();
+
   // TODO : add sound - currently board is crashing   
   // soundEngine->begin();
-  // delay(1000);
-
   // soundEngine->playSoundWithIndex(1);
 
-  track.begin();
 
   for (int i = 0; i < NUM_PLAYERS; i++) {
     pinMode(PIN_INPUTS[i], INPUT_PULLUP);
@@ -212,9 +211,9 @@ void loop() {
   // TODO : allow for n players
   if (draworder == 0) {
     drawCar(racers[0]);
-    // drawCar(racers[1]);
+    drawCar(racers[1]);
   } else {
-    // drawCar(racers[1]);
+    drawCar(racers[1]);
     drawCar(racers[0]);
   }
 
