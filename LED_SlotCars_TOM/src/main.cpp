@@ -36,7 +36,7 @@
 #define NPIXELS 280 // MAX LEDs actives on strip
 
 // Pins Arduino Day 19 version
-#define PIN_LED 19  // R 500 ohms to DI pin for WS2812 and WS2813, for WS2813 BI pin of first LED to GND  ,  CAP 1000 uF to VCC 5v/GND,power supplie 5V 2A
+#define PIN_LED 10  // R 500 ohms to DI pin for WS2812 and WS2813, for WS2813 BI pin of first LED to GND  ,  CAP 1000 uF to VCC 5v/GND,power supplie 5V 2A
 
 
 Adafruit_NeoPixel track = Adafruit_NeoPixel(NPIXELS, PIN_LED, NEO_GRB + NEO_KHZ800);
@@ -66,7 +66,7 @@ typedef struct {
 Racer racers[NUM_PLAYERS];
 
 // switch players to PIN and GND
-int PIN_INPUTS[] = {A0, A1};
+int PIN_INPUTS[] = {2,3};
 uint32_t COLORS[] = {
   RED,
   BLUE,
@@ -163,7 +163,7 @@ void resetRacers() {
 
 void drawCar(Racer racer) {
   for (int i = 0; i <= racer.lapNum; i++) {
-    track.setPixelColor((roundf(racer.location) % NPIXELS) , racer.color);
+    track.setPixelColor((int)racer.location , racer.color);
   };
 }
 void loopx() {
@@ -232,10 +232,11 @@ void updateRacerLocation(Racer *racer) {
       racer->flag_sw = 1;
     };
 
-    int prevLoc = roundf(racer->location) % NPIXELS;
+    int prevLoc = (int)racer->location;
+
     racer->speed -= racer->speed * KF;
     racer->location += racer->speed;
-    int loc = roundf(racer->location) % NPIXELS;
+    int loc = (int)racer->location;
 
     for(uint8_t i=0; i < ARRAY_SIZE(corners); i++){
       if(corners[i] > (prevLoc - ( 2 * cornerLength)) && 
