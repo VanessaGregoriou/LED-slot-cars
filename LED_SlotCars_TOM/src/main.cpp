@@ -29,6 +29,9 @@
 
 #include <Adafruit_NeoPixel.h>
 #include <math.h>
+#include "SoftwareSerial.h"
+#include "DFRobotDFPlayerMini.h"
+
 // #include <SoundEngine_VS1053.hpp>
 
 #define ARRAY_SIZE(array) ((sizeof(array)) / (sizeof(array[0])))
@@ -36,10 +39,14 @@
 #define NPIXELS 280 // MAX LEDs actives on strip
 
 // Pins Arduino Day 19 version
-#define PIN_LED 10  // R 500 ohms to DI pin for WS2812 and WS2813, for WS2813 BI pin of first LED to GND  ,  CAP 1000 uF to VCC 5v/GND,power supplie 5V 2A
+#define PIN_LED 17  // R 500 ohms to DI pin for WS2812 and WS2813, for WS2813 BI pin of first LED to GND  ,  CAP 1000 uF to VCC 5v/GND,power supplie 5V 20
 
 
 Adafruit_NeoPixel track = Adafruit_NeoPixel(NPIXELS, PIN_LED, NEO_GRB + NEO_KHZ800);
+SoftwareSerial mySoftwareSerial(18, 19); // RX, TX
+DFRobotDFPlayerMini myDFPlayer;
+
+
 
 #define RED track.Color(255, 0, 0)
 #define GREEN track.Color(0, 255, 0)
@@ -66,7 +73,7 @@ typedef struct {
 Racer racers[NUM_PLAYERS];
 
 // switch players to PIN and GND
-int PIN_INPUTS[] = {2,3};
+int PIN_INPUTS[] = {A0,A1};
 uint32_t COLORS[] = {
   RED,
   BLUE,
@@ -110,11 +117,28 @@ void start_race();
 void setup() {
   Serial.begin(9600);
 
+  mySoftwareSerial.begin(9600);
+
+  // if (!myDFPlayer.begin(mySoftwareSerial)) {  //Use softwareSerial to communicate with mp3.
+  //   Serial.println(F("Unable to begin:"));
+  //   Serial.println(F("1.Please recheck the connection!"));
+  //   Serial.println(F("2.Please insert the SD card!"));
+  //   while(true);
+  // }
+  // Serial.println(F("DFPlayer Mini online."));
+  // myDFPlayer.volume(30); 
+  // myDFPlayer.next();
+
+  // delay(2000);
+  // myDFPlayer.pause();  //pause the mp3
+
+
+
   track.begin();
 
-  // TODO : add sound - currently board is crashing   
-  // soundEngine->begin();
-  // soundEngine->playSoundWithIndex(1);
+  // // TODO : add sound - currently board is crashing   
+  // // soundEngine->begin();
+  // // soundEngine->playSoundWithIndex(1);
 
 
   for (int i = 0; i < NUM_PLAYERS; i++) {
