@@ -9,32 +9,36 @@ SoundEngine_VS1053::SoundEngine_VS1053(){
 void SoundEngine_VS1053::begin(void){
 
     if (! musicPlayer->begin()) { 
-        Serial.println(F("Couldn't find VS1053, do you have the right pins defined?"));
-        while (1);
+      Serial.println(F("Couldn't find VS1053, do you have the right pins defined?"));
+      while (1);
     }
     Serial.println(F("VS1053 found"));
 
     if (!SD.begin(CARDCS)) {
-    Serial.println(F("SD failed, or not present"));
-    while (1);  // don't do anything more
+      Serial.println(F("SD failed, or not present"));
+      while (1);  
     }
+    Serial.println(F("SD found"));
 
+    // if(musicPlayer->useInterrupt(VS1053_FILEPLAYER_PIN_INT)){
+    //   Serial.println(F("interupt working"));
+    // };  
+    
     // make as loud as possible
     musicPlayer->setVolume(0,0);
-
-  if(musicPlayer->useInterrupt(VS1053_FILEPLAYER_PIN_INT)){
-    Serial.print("interupt working");
-  };  
 }
 
 void SoundEngine_VS1053::playSoundWithIndex(int i){
 
-    String s = "/track00";
-    s = s + i;
-    s = s + ".mp3";
-    musicPlayer->stopPlaying(); // must call stop before playing again!
-    Serial.println(s.c_str());
-    musicPlayer->startPlayingFile(s.c_str());
+  char str[] = "/track00";
+  char num[] = "1234";
+  itoa(i,num,10);
+  strcat(str, num);    
+  strcat(str, ".mp3");    
+  Serial.println(str);
+  musicPlayer->playFullFile(str);
+    // musicPlayer->startPlayingFile(str);
+
 }
 
 
