@@ -35,19 +35,16 @@
 // #include <SoundEngine_VS1053.hpp>
 
 #define ARRAY_SIZE(array) ((sizeof(array)) / (sizeof(array[0])))
-// #define NPIXELS 658 // MAX LEDs actives on strip
-#define NPIXELS 280 // MAX LEDs actives on strip
-
-// Pins Arduino Day 19 version
-#define PIN_LED 17  // R 500 ohms to DI pin for WS2812 and WS2813, for WS2813 BI pin of first LED to GND  ,  CAP 1000 uF to VCC 5v/GND,power supplie 5V 20
-
+#define NPIXELS 300 // MAX LEDs actives on strip
+#define PIN_LED A0
+#define PIN_START_BUTTON 11
+#define NUM_PLAYERS 2
+#define NUM_LAPS 2 // total laps race
 
 Adafruit_NeoPixel track = Adafruit_NeoPixel(NPIXELS, PIN_LED, NEO_GRB + NEO_KHZ800);
-SoftwareSerial mySoftwareSerial(18, 19); // RX, TX
-DFRobotDFPlayerMini myDFPlayer;
 
-
-
+#define CLEAR track.Color(0, 0, 0)
+#define WHITE track.Color(255, 255, 255);
 #define RED track.Color(255, 0, 0)
 #define GREEN track.Color(0, 255, 0)
 #define BLUE track.Color(0, 0, 255)
@@ -56,8 +53,6 @@ DFRobotDFPlayerMini myDFPlayer;
 #define PINK track.Color(204, 0, 102)
 #define ORANGE track.Color(204, 102, 0)
 #define LIGHT_BLUE track.Color(153, 255, 255)
-
-#define NUM_PLAYERS 2
 
 typedef struct {
   int pin;
@@ -73,28 +68,28 @@ typedef struct {
 Racer racers[NUM_PLAYERS];
 
 // switch players to PIN and GND
-int PIN_INPUTS[] = {A0,A1};
+int PIN_INPUTS[] = {7, 6};
 uint32_t COLORS[] = {
-  RED,
   BLUE,
+  RED,
 };
 
-int corners[] = {15, 45, 90, 120, 150, 180, 225, 270};
-byte cornerLength = 2;
+#define PIN_AUDIO 3 // through CAP 2uf to speaker 8 ohms
 
-byte leader = 0;
-byte loop_max = 5; // total laps race
+int raceMap[NPIXELS];
+int corners[] = {30, 70, 110, 145, 176, 210, 242, 265};
 
-#define ACEL 0.03
+bool raceStarted = false;
+
+#define ACEL 0.018
 #define KF 0.015 // friction constant
 #define KG 0.003 // gravity constant
-#define CRASH_WAIT_TIME 3000
-#define MAX_CORNER_SPEED 110
+#define CRASH_WAIT_TIME 10000
+#define MAX_CORNER_SPEED 150
 #define MAX_SPEED 500
+#define TDELAY 5
 
 byte draworder = 0;
-
-int tdelay = 5;
 
 Racer newRacer(int pin, uint32_t color) {
   return Racer{
@@ -108,76 +103,33 @@ Racer newRacer(int pin, uint32_t color) {
       /* crashWait= */ 0};
 }
 
-// SoundEngine_VS1053 *soundEngine = new SoundEngine_VS1053();
-
-void updateRacerLocation(Racer *racer);
-void start_race();
-
-
 void setup() {
   Serial.begin(9600);
-
-  mySoftwareSerial.begin(9600);
-
-  // if (!myDFPlayer.begin(mySoftwareSerial)) {  //Use softwareSerial to communicate with mp3.
-  //   Serial.println(F("Unable to begin:"));
-  //   Serial.println(F("1.Please recheck the connection!"));
-  //   Serial.println(F("2.Please insert the SD card!"));
-  //   while(true);
-  // }
-  // Serial.println(F("DFPlayer Mini online."));
-  // myDFPlayer.volume(30); 
-  // myDFPlayer.next();
-
-  // delay(2000);
-  // myDFPlayer.pause();  //pause the mp3
-
-
-
   track.begin();
-
-  // // TODO : add sound - currently board is crashing   
-  // // soundEngine->begin();
-  // // soundEngine->playSoundWithIndex(1);
-
-
+  pinMode(PIN_START_BUTTON, INPUT_PULLUP);
   for (int i = 0; i < NUM_PLAYERS; i++) {
     pinMode(PIN_INPUTS[i], INPUT_PULLUP);
     racers[i] = newRacer(PIN_INPUTS[i], COLORS[i]);
   }
 
-  start_race();
-
+  prepRace();
 }
 
-void start_race() { 
-  
+void prepRace() {
   for (int i = 0; i < NPIXELS; i++) {
+    raceMap[i] = MAX_SPEED;
     track.setPixelColor(i, track.Color(0, 0, 0));
   };
-  track.show();
-
-  if(true){
-    track.setPixelColor(12, track.Color(0, 255, 0));
-    track.setPixelColor(11, track.Color(0, 255, 0));
-    track.show();
-    delay(2000);
-    track.setPixelColor(12, track.Color(0, 0, 0));
-    track.setPixelColor(11, track.Color(0, 0, 0));
-    track.setPixelColor(10, track.Color(255, 255, 0));
-    track.setPixelColor(9, track.Color(255, 255, 0));
-    track.show();
-    delay(2000);
-    track.setPixelColor(9, track.Color(0, 0, 0));
-    track.setPixelColor(10, track.Color(0, 0, 0));
-    track.setPixelColor(8, track.Color(255, 0, 0));
-    track.setPixelColor(7, track.Color(255, 0, 0));
-    track.show();
-    delay(2000);
-  };
+  for (int i = 0; i < ARRAY_SIZE(corners); i++) {
+    int cornerStart = corners[i];
+    for (int j = -5; j < 5; j++) {
+      raceMap[cornerStart + j] = MAX_CORNER_SPEED - (5 - abs(j)) * 10;
+    }
+  }
 }
 
-void resetRacers() {
+void resetRace() {
+  raceStarted = false;
   for (int i = 0; i < NUM_PLAYERS; i++) {
     racers[i].speed = 0;
     racers[i].location = 0;
@@ -185,35 +137,95 @@ void resetRacers() {
   }
 }
 
+void winnerFx() {
+  // int msize = sizeof(win_music) / sizeof(int);
+  // for (int note = 0; note < msize; note++) {
+  //   tone(PIN_AUDIO, win_music[note], 200);
+  //   delay(230);
+  //   noTone(PIN_AUDIO);
+  // }
+};
+
 void drawCar(Racer racer) {
   for (int i = 0; i <= racer.lapNum; i++) {
-    track.setPixelColor((int)racer.location , racer.color);
-  };
+    uint32_t color = racer.color;
+    if (racer.crashWait > 0 && racer.crashWait % 3000 < 1500) {
+      color = WHITE;
+    }
+    track.setPixelColor(((word)racer.location % NPIXELS) + i, color);
+  }
 }
-void loopx() {
-}
+
 void loop() {
   track.clear();
+  if (!raceStarted) {
+    bool blinkOn = true;
+    while (!buttonPressed(PIN_START_BUTTON)) {
+      if (blinkOn) {
+        showCorners();
+      } else {
+        track.clear();
+        track.show();
+      }
+      // blinkOn = !blinkOn;
+      delay(500);
+    }
+    raceStarted = true;
+    beginCountdown();
+  } else {
+    drawRace();
+  }
+  delay(TDELAY);
+}
 
-  // light up the whole track
-  for (int i = 0; i < NPIXELS; i++) {
-    track.setPixelColor(i, track.Color(1,1,1));
-  };
-
-  // show corners
-  for (uint8_t i = 0; i < ARRAY_SIZE(corners); i++) {
-    int cornerStart = corners[i] - cornerLength;
-    int cornerEnd = corners[i] + cornerLength;
-    int cornerSize = cornerEnd - cornerStart;
-    for(int j = 0; j < cornerSize; j++){
-      track.setPixelColor(cornerStart + j, YELLOW);
+void showCorners() {
+  for (int i = 0; i < ARRAY_SIZE(corners); i++) {
+    int cornerStart = corners[i];
+    for (int j = -5; j < 5; j++) {
+      track.setPixelColor(cornerStart + j, PINK);
     }
   }
+  track.show();
+}
 
+void beginCountdown() {
+  track.clear();
+  // TODO: start the sound effects
+  track.setPixelColor(9, RED);
+  track.setPixelColor(8, RED);
+  track.setPixelColor(7, RED);
+  track.setPixelColor(6, ORANGE);
+  track.setPixelColor(5, ORANGE);
+  track.setPixelColor(4, ORANGE);
+  track.setPixelColor(3, GREEN);
+  track.setPixelColor(2, GREEN);
+  track.setPixelColor(1, GREEN);
+  track.show();
+  delay(1500);
+
+  track.setPixelColor(9, CLEAR);
+  track.setPixelColor(8, CLEAR);
+  track.setPixelColor(7, CLEAR);
+  track.show();
+  delay(1500);
+
+  track.setPixelColor(6, CLEAR);
+  track.setPixelColor(5, CLEAR);
+  track.setPixelColor(4, CLEAR);
+  track.show();
+  delay(1500);
+
+  track.setPixelColor(3, CLEAR);
+  track.setPixelColor(2, CLEAR);
+  track.setPixelColor(1, CLEAR);
+  track.show();
+}
+
+void drawRace() {
   int winner = -1;
   for (int i = 0; i < NUM_PLAYERS; i++) {
-    updateRacerLocation(&(racers[i]));
-    if (racers[i].lapNum > loop_max) {
+    racers[i] = updateRacerLocation(racers[i]);
+    if (racers[i].lapNum >= NUM_LAPS) {
       winner = i;
     }
   }
@@ -223,16 +235,15 @@ void loop() {
       track.setPixelColor(i, racers[winner].color);
     };
     track.show();
-    delay(2000);
-    resetRacers();
-    start_race();
+    winnerFx();
+    while (!buttonPressed(PIN_START_BUTTON));
+    resetRace();
   }
-  
+
   if ((millis() & 512) == (512 * draworder)) {
     draworder = draworder == 0 ? 1 : 0;
   };
 
-  // TODO : allow for n players
   if (draworder == 0) {
     drawCar(racers[0]);
     drawCar(racers[1]);
@@ -242,43 +253,44 @@ void loop() {
   }
 
   track.show();
-  delay(tdelay);
-
 }
 
-void updateRacerLocation(Racer *racer) {
-
-  if (racer->crashWait == 0) {
-    if (digitalRead(racer->pin) == HIGH) {
-      racer->flag_sw = 0;
-      racer->speed += ACEL;
-    } else if (racer->flag_sw == 0) {
-      racer->flag_sw = 1;
+Racer updateRacerLocation(Racer racer) {
+  if (racer.crashWait == 0) {
+    if (buttonPressed(racer.pin)) {
+      racer.flag_sw = 0;
+      racer.speed += ACEL;
+    } else if (racer.flag_sw == 0) {
+      racer.flag_sw = 1;
     };
+    racer.speed -= racer.speed * KF;
 
-    int prevLoc = (int)racer->location;
+    for (int distFromLocation = 0; distFromLocation < racer.speed; distFromLocation++) {
+      int location = round(racer.location + distFromLocation) % NPIXELS;
 
-    racer->speed -= racer->speed * KF;
-    racer->location += racer->speed;
-    int loc = (int)racer->location;
-
-    for(uint8_t i=0; i < ARRAY_SIZE(corners); i++){
-      if(corners[i] > (prevLoc - ( 2 * cornerLength)) && 
-        corners[i] <= loc && 
-        (racer->speed * 100) >= MAX_CORNER_SPEED ){
-        racer->location = loc;
-        racer->crashTimestamp = millis();
-        racer->crashWait = CRASH_WAIT_TIME;
-        racer->speed = 0;
+      if (racer.speed * 100 >= raceMap[location]) {
+        racer.location = location;
+        racer.crashTimestamp = millis();
+        racer.crashWait = CRASH_WAIT_TIME;
+        racer.speed = 0;
+        break;
       }
     }
+    if (racer.crashWait == 0) {
+      racer.location += racer.speed;
+    }
   } else {
-    long timeSinceCrash = millis() - racer->crashTimestamp;
-    racer->crashWait = max(racer->crashWait - timeSinceCrash, 0);
+    long timeSinceCrash = millis() - racer.crashTimestamp;
+    racer.crashWait = max(racer.crashWait - timeSinceCrash, 0);
   }
 
-  if (racer->location >= NPIXELS) {
-    racer->lapNum++;
-    racer->location = 0;
+  if (racer.location >= NPIXELS) {
+    racer.lapNum++;
+    racer.location = 0;
   }
+  return racer;
+}
+
+bool buttonPressed(int pin) {
+  return digitalRead(pin) == 0;
 }
