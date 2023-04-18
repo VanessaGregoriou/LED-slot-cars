@@ -36,7 +36,7 @@
 
 #define ARRAY_SIZE(array) ((sizeof(array)) / (sizeof(array[0])))
 #define NPIXELS 300 // MAX LEDs actives on strip
-#define PIN_LED 17
+#define PIN_LED A0
 #define PIN_START_BUTTON 11
 #define NUM_PLAYERS 2
 #define NUM_LAPS 2 // total laps race
@@ -157,6 +157,15 @@ void prepRace() {
   }
 }
 
+void winnerFx() {
+  // int msize = sizeof(win_music) / sizeof(int);
+  // for (int note = 0; note < msize; note++) {
+  //   tone(PIN_AUDIO, win_music[note], 200);
+  //   delay(230);
+  //   noTone(PIN_AUDIO);
+  // }
+};
+
 void drawCar(Racer racer) {
   for (uint8_t i = 0; i <= racer.lapNum; i++) {
     uint32_t color = racer.color;
@@ -171,7 +180,6 @@ void loopx() {}
 
 void loop() {
   track.clear();
-
   if (!raceStarted) {
     bool blinkOn = true;
     while (!buttonPressed(PIN_START_BUTTON)) {
@@ -191,6 +199,7 @@ void loop() {
   }
   delay(TDELAY);
 }
+
 
 void showCorners() {
   for (uint8_t i = 0; i < ARRAY_SIZE(corners); i++) {
@@ -257,7 +266,6 @@ void drawRace() {
     draworder = draworder == 0 ? 1 : 0;
   };
 
-  // TODO : allow for n players
   if (draworder == 0) {
     drawCar(racers[0]);
     drawCar(racers[1]);
