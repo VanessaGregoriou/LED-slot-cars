@@ -35,19 +35,18 @@
 // #include <SoundEngine_VS1053.hpp>
 
 #define ARRAY_SIZE(array) ((sizeof(array)) / (sizeof(array[0])))
-// #define NPIXELS 658 // MAX LEDs actives on strip
-#define NPIXELS 280 // MAX LEDs actives on strip
-
-// Pins Arduino Day 19 version
-#define PIN_LED 17  // R 500 ohms to DI pin for WS2812 and WS2813, for WS2813 BI pin of first LED to GND  ,  CAP 1000 uF to VCC 5v/GND,power supplie 5V 20
-
+#define NPIXELS 300 // MAX LEDs actives on strip
+#define PIN_LED 17
+#define PIN_START_BUTTON 11
+#define NUM_PLAYERS 2
+#define NUM_LAPS 2 // total laps race
 
 Adafruit_NeoPixel track = Adafruit_NeoPixel(NPIXELS, PIN_LED, NEO_GRB + NEO_KHZ800);
 SoftwareSerial mySoftwareSerial(18, 19); // RX, TX
 DFRobotDFPlayerMini myDFPlayer;
 
-
-
+#define CLEAR track.Color(0, 0, 0)
+#define WHITE track.Color(255, 255, 255);
 #define RED track.Color(255, 0, 0)
 #define GREEN track.Color(0, 255, 0)
 #define BLUE track.Color(0, 0, 255)
@@ -56,8 +55,6 @@ DFRobotDFPlayerMini myDFPlayer;
 #define PINK track.Color(204, 0, 102)
 #define ORANGE track.Color(204, 102, 0)
 #define LIGHT_BLUE track.Color(153, 255, 255)
-
-#define NUM_PLAYERS 2
 
 typedef struct {
   int pin;
@@ -73,28 +70,28 @@ typedef struct {
 Racer racers[NUM_PLAYERS];
 
 // switch players to PIN and GND
-int PIN_INPUTS[] = {A0,A1};
+int PIN_INPUTS[] = {7, 6};
 uint32_t COLORS[] = {
-  RED,
   BLUE,
+  RED,
 };
 
-int corners[] = {15, 45, 90, 120, 150, 180, 225, 270};
-byte cornerLength = 2;
+#define PIN_AUDIO 3 // through CAP 2uf to speaker 8 ohms
 
-byte leader = 0;
-byte loop_max = 5; // total laps race
+int corners[] = {30, 70, 110, 145, 176, 210, 242, 265};
+byte cornerLength = 10;
 
-#define ACEL 0.03
+bool raceStarted = false;
+
+#define ACEL 0.018
 #define KF 0.015 // friction constant
 #define KG 0.003 // gravity constant
-#define CRASH_WAIT_TIME 3000
-#define MAX_CORNER_SPEED 110
+#define CRASH_WAIT_TIME 10000
+#define MAX_CORNER_SPEED 150
 #define MAX_SPEED 500
+#define TDELAY 5
 
 byte draworder = 0;
-
-int tdelay = 5;
 
 Racer newRacer(int pin, uint32_t color) {
   return Racer{
@@ -110,13 +107,16 @@ Racer newRacer(int pin, uint32_t color) {
 
 // SoundEngine_VS1053 *soundEngine = new SoundEngine_VS1053();
 
+void prepRace();
+void showCorners();
+void beginCountdown();
+void drawRace();
+void drawCar();
 void updateRacerLocation(Racer *racer);
-void start_race();
-
+bool buttonPressed(int pin);
 
 void setup() {
   Serial.begin(9600);
-
   mySoftwareSerial.begin(9600);
 
   // if (!myDFPlayer.begin(mySoftwareSerial)) {  //Use softwareSerial to communicate with mp3.
@@ -132,53 +132,25 @@ void setup() {
   // delay(2000);
   // myDFPlayer.pause();  //pause the mp3
 
-
-
   track.begin();
 
-  // // TODO : add sound - currently board is crashing   
-  // // soundEngine->begin();
-  // // soundEngine->playSoundWithIndex(1);
+  // TODO : add sound - currently board is crashing
+  // soundEngine->begin();
+  // soundEngine->playSoundWithIndex(1);
 
-
-  for (int i = 0; i < NUM_PLAYERS; i++) {
+  pinMode(PIN_START_BUTTON, INPUT_PULLUP);
+  for (uint8_t i = 0; i < NUM_PLAYERS; i++) {
     pinMode(PIN_INPUTS[i], INPUT_PULLUP);
     racers[i] = newRacer(PIN_INPUTS[i], COLORS[i]);
   }
 
-  start_race();
-
+  prepRace();
 }
 
-void start_race() { 
-  
-  for (int i = 0; i < NPIXELS; i++) {
-    track.setPixelColor(i, track.Color(0, 0, 0));
-  };
-  track.show();
-
-  if(true){
-    track.setPixelColor(12, track.Color(0, 255, 0));
-    track.setPixelColor(11, track.Color(0, 255, 0));
-    track.show();
-    delay(2000);
-    track.setPixelColor(12, track.Color(0, 0, 0));
-    track.setPixelColor(11, track.Color(0, 0, 0));
-    track.setPixelColor(10, track.Color(255, 255, 0));
-    track.setPixelColor(9, track.Color(255, 255, 0));
-    track.show();
-    delay(2000);
-    track.setPixelColor(9, track.Color(0, 0, 0));
-    track.setPixelColor(10, track.Color(0, 0, 0));
-    track.setPixelColor(8, track.Color(255, 0, 0));
-    track.setPixelColor(7, track.Color(255, 0, 0));
-    track.show();
-    delay(2000);
-  };
-}
-
-void resetRacers() {
-  for (int i = 0; i < NUM_PLAYERS; i++) {
+void prepRace() {
+  track.clear();
+  raceStarted = false;
+  for (uint8_t i = 0; i < NUM_PLAYERS; i++) {
     racers[i].speed = 0;
     racers[i].location = 0;
     racers[i].lapNum = 0;
@@ -186,48 +158,101 @@ void resetRacers() {
 }
 
 void drawCar(Racer racer) {
-  for (int i = 0; i <= racer.lapNum; i++) {
-    track.setPixelColor((int)racer.location , racer.color);
-  };
+  for (uint8_t i = 0; i <= racer.lapNum; i++) {
+    uint32_t color = racer.color;
+    if (racer.crashWait > 0 && racer.crashWait % 3000 < 1500) {
+      color = WHITE;
+    }
+    track.setPixelColor(((word)racer.location % NPIXELS) + i, color);
+  }
 }
-void loopx() {
-}
+
+void loopx() {}
+
 void loop() {
   track.clear();
 
-  // light up the whole track
-  for (int i = 0; i < NPIXELS; i++) {
-    track.setPixelColor(i, track.Color(1,1,1));
-  };
+  if (!raceStarted) {
+    bool blinkOn = true;
+    while (!buttonPressed(PIN_START_BUTTON)) {
+      if (blinkOn) {
+        showCorners();
+      } else {
+        track.clear();
+        track.show();
+      }
+      // blinkOn = !blinkOn;
+      delay(500);
+    }
+    raceStarted = true;
+    beginCountdown();
+  } else {
+    drawRace();
+  }
+  delay(TDELAY);
+}
 
-  // show corners
+void showCorners() {
   for (uint8_t i = 0; i < ARRAY_SIZE(corners); i++) {
-    int cornerStart = corners[i] - cornerLength;
-    int cornerEnd = corners[i] + cornerLength;
-    int cornerSize = cornerEnd - cornerStart;
-    for(int j = 0; j < cornerSize; j++){
+    int cornerStart = corners[i];
+    for (uint8_t j = -1 * cornerLength/2; j < cornerLength/2; j++) {
       track.setPixelColor(cornerStart + j, YELLOW);
     }
   }
+  track.show();
+}
 
+void beginCountdown() {
+  track.clear();
+  // TODO: start the sound effects
+  track.setPixelColor(9, RED);
+  track.setPixelColor(8, RED);
+  track.setPixelColor(7, RED);
+  track.setPixelColor(6, ORANGE);
+  track.setPixelColor(5, ORANGE);
+  track.setPixelColor(4, ORANGE);
+  track.setPixelColor(3, GREEN);
+  track.setPixelColor(2, GREEN);
+  track.setPixelColor(1, GREEN);
+  track.show();
+  delay(1500);
+
+  track.setPixelColor(9, CLEAR);
+  track.setPixelColor(8, CLEAR);
+  track.setPixelColor(7, CLEAR);
+  track.show();
+  delay(1500);
+
+  track.setPixelColor(6, CLEAR);
+  track.setPixelColor(5, CLEAR);
+  track.setPixelColor(4, CLEAR);
+  track.show();
+  delay(1500);
+
+  track.setPixelColor(3, CLEAR);
+  track.setPixelColor(2, CLEAR);
+  track.setPixelColor(1, CLEAR);
+  track.show();
+}
+
+void drawRace() {
   int winner = -1;
-  for (int i = 0; i < NUM_PLAYERS; i++) {
+  for (uint8_t i = 0; i < NUM_PLAYERS; i++) {
     updateRacerLocation(&(racers[i]));
-    if (racers[i].lapNum > loop_max) {
+    if (racers[i].lapNum >= NUM_LAPS) {
       winner = i;
     }
   }
   
   if (winner != -1) {
-    for (int i = 0; i < NPIXELS; i++) {
+    for (uint8_t i = 0; i < NPIXELS; i++) {
       track.setPixelColor(i, racers[winner].color);
     };
     track.show();
-    delay(2000);
-    resetRacers();
-    start_race();
+    while (!buttonPressed(PIN_START_BUTTON));
+    prepRace();
   }
-  
+
   if ((millis() & 512) == (512 * draworder)) {
     draworder = draworder == 0 ? 1 : 0;
   };
@@ -242,35 +267,49 @@ void loop() {
   }
 
   track.show();
-  delay(tdelay);
+  delay(TDELAY);
 
 }
 
 void updateRacerLocation(Racer *racer) {
 
   if (racer->crashWait == 0) {
-    if (digitalRead(racer->pin) == HIGH) {
+    if (buttonPressed(racer->pin)) {
       racer->flag_sw = 0;
       racer->speed += ACEL;
     } else if (racer->flag_sw == 0) {
       racer->flag_sw = 1;
     };
-
-    int prevLoc = (int)racer->location;
-
     racer->speed -= racer->speed * KF;
-    racer->location += racer->speed;
-    int loc = (int)racer->location;
 
-    for(uint8_t i=0; i < ARRAY_SIZE(corners); i++){
-      if(corners[i] > (prevLoc - ( 2 * cornerLength)) && 
-        corners[i] <= loc && 
-        (racer->speed * 100) >= MAX_CORNER_SPEED ){
-        racer->location = loc;
+    int loc = (int) racer->location;
+    int cornerLocation = -1;
+
+    for (uint8_t i = 0; i < ARRAY_SIZE(corners); i++) {
+      if (corners[i] > loc && corners[i] <= loc + cornerLength) {
+        cornerLocation = -1;
+        break;
+      }
+    }
+
+    for (uint8_t distFromLocation = 0; distFromLocation < racer->speed; distFromLocation++) {
+      int location = round(loc + distFromLocation) % NPIXELS;
+      int maxSpeed = MAX_SPEED;
+      if (location > cornerLocation - cornerLocation/2
+        || location < cornerLocation + cornerLocation/2) {
+        maxSpeed = MAX_CORNER_SPEED;
+      }
+
+      if (racer->speed * 100 >= maxSpeed) {
+        racer->location = location;
         racer->crashTimestamp = millis();
         racer->crashWait = CRASH_WAIT_TIME;
         racer->speed = 0;
+        break;
       }
+    }
+    if (racer->crashWait == 0) {
+      racer->location += racer->speed;
     }
   } else {
     long timeSinceCrash = millis() - racer->crashTimestamp;
@@ -281,4 +320,8 @@ void updateRacerLocation(Racer *racer) {
     racer->lapNum++;
     racer->location = 0;
   }
+}
+
+bool buttonPressed(int pin) {
+  return digitalRead(pin) == 0;
 }
