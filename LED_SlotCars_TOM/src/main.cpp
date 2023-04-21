@@ -109,11 +109,34 @@ Racer newRacer(int pin, uint32_t color) {
 }
 
 // SoundEngine_VS1053 *soundEngine = new SoundEngine_VS1053();
-
+//------------------------------------------------
 void updateRacerLocation(Racer *racer);
 void start_race();
+void setTrackPixel(uint16_t n, uint32_t c);
+void clearTrackPixels();
+void updateTrackPixels();
+void setupTrackPixels();
+
+//------------------------------------------------
+void setupTrackPixels(){
+  track.begin();
+}
 
 
+void updateTrackPixels(){
+  track.show();
+}
+
+void clearTrackPixels(){
+  track.clear();
+}
+
+void setTrackPixel(uint16_t n, uint32_t c){
+    track.setPixelColor(n, c);
+}
+
+
+//------------------------------------------------
 void setup() {
   Serial.begin(9600);
 
@@ -133,8 +156,8 @@ void setup() {
   // myDFPlayer.pause();  //pause the mp3
 
 
-
-  track.begin();
+  setupTrackPixels();
+  
 
   // // TODO : add sound - currently board is crashing   
   // // soundEngine->begin();
@@ -153,26 +176,26 @@ void setup() {
 void start_race() { 
   
   for (int i = 0; i < NPIXELS; i++) {
-    track.setPixelColor(i, track.Color(0, 0, 0));
+    setTrackPixel(i, track.Color(0, 0, 0));
   };
-  track.show();
+  updateTrackPixels();
 
   if(true){
-    track.setPixelColor(12, track.Color(0, 255, 0));
-    track.setPixelColor(11, track.Color(0, 255, 0));
-    track.show();
+    setTrackPixel(12, track.Color(0, 255, 0));
+    setTrackPixel(11, track.Color(0, 255, 0));
+    updateTrackPixels();
     delay(2000);
-    track.setPixelColor(12, track.Color(0, 0, 0));
-    track.setPixelColor(11, track.Color(0, 0, 0));
-    track.setPixelColor(10, track.Color(255, 255, 0));
-    track.setPixelColor(9, track.Color(255, 255, 0));
-    track.show();
+    setTrackPixel(12, track.Color(0, 0, 0));
+    setTrackPixel(11, track.Color(0, 0, 0));
+    setTrackPixel(10, track.Color(255, 255, 0));
+    setTrackPixel(9, track.Color(255, 255, 0));
+    updateTrackPixels();
     delay(2000);
-    track.setPixelColor(9, track.Color(0, 0, 0));
-    track.setPixelColor(10, track.Color(0, 0, 0));
-    track.setPixelColor(8, track.Color(255, 0, 0));
-    track.setPixelColor(7, track.Color(255, 0, 0));
-    track.show();
+    setTrackPixel(9, track.Color(0, 0, 0));
+    setTrackPixel(10, track.Color(0, 0, 0));
+    setTrackPixel(8, track.Color(255, 0, 0));
+    setTrackPixel(7, track.Color(255, 0, 0));
+    updateTrackPixels();
     delay(2000);
   };
 }
@@ -187,17 +210,17 @@ void resetRacers() {
 
 void drawCar(Racer racer) {
   for (int i = 0; i <= racer.lapNum; i++) {
-    track.setPixelColor((int)racer.location , racer.color);
+    setTrackPixel((int)racer.location , racer.color);
   };
 }
 void loopx() {
 }
 void loop() {
-  track.clear();
+  clearTrackPixels();
 
   // light up the whole track
   for (int i = 0; i < NPIXELS; i++) {
-    track.setPixelColor(i, track.Color(1,1,1));
+    setTrackPixel(i, track.Color(1,1,1));
   };
 
   // show corners
@@ -206,7 +229,7 @@ void loop() {
     int cornerEnd = corners[i] + cornerLength;
     int cornerSize = cornerEnd - cornerStart;
     for(int j = 0; j < cornerSize; j++){
-      track.setPixelColor(cornerStart + j, YELLOW);
+      setTrackPixel(cornerStart + j, YELLOW);
     }
   }
 
@@ -220,9 +243,9 @@ void loop() {
   
   if (winner != -1) {
     for (int i = 0; i < NPIXELS; i++) {
-      track.setPixelColor(i, racers[winner].color);
+      setTrackPixel(i, racers[winner].color);
     };
-    track.show();
+    updateTrackPixels();
     delay(2000);
     resetRacers();
     start_race();
@@ -241,7 +264,7 @@ void loop() {
     drawCar(racers[0]);
   }
 
-  track.show();
+  updateTrackPixels();
   delay(tdelay);
 
 }
